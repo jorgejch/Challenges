@@ -3,6 +3,8 @@ __author__ = 'Jorge Haddad'
 import csv
 import sys
 
+# TODO: Colocar PrecoPorKg na Rota.
+
 """
  Script que calcula o prazo e preço de frete.
 
@@ -21,8 +23,8 @@ import sys
 
 
 class Tabelas ():
-    TABELA1 = 1
-    TABELA2 = 2
+    TABELA1 = 0
+    TABELA2 = 1
 
 
 class Rota:
@@ -48,9 +50,11 @@ class RotaTabela1(Rota):
         return super().calcular_taxas(valor_nota) + self.fixa
 
     def calcular_total(self, preco: float, peso: float, valor_nota: float):
-        assert preco is not None
         assert peso is not None
         assert valor_nota is not None
+
+        if preco is None:
+            return "-"
 
         subtotal = ((peso * preco) + self.calcular_taxas(valor_nota))
         return subtotal / ((100 - self.icms) / 100)
@@ -65,6 +69,10 @@ class RotaTabela2(Rota):
     def calcular_total(self, preco: float, peso: float, valor_nota: float):
         if 0 < self.limite < peso:
             return "-"
+
+        if preco is None:
+            return "-"
+
         subtotal = ((peso * preco) + self.calcular_taxas(valor_nota))
         alfandega = subtotal * (self.alfandega / 100)
         return (subtotal + alfandega) / ((100 - self.icms) / 100)
@@ -79,7 +87,6 @@ class PrecoPorKg:
 
     def testar_intervalo(self, peso: float):
         final = (self.final or peso + 1)
-        print(final)  # Debug
         return True if self.inicial <= peso < final else False
 
 
@@ -92,12 +99,16 @@ class Orcamento:
         self.peso = peso
 
         def carregar_csv(arquivo, delim=','):
+            assert arquivo
+
             with open(arquivo, 'r') as csvfile:
                 file = csv.DictReader(csvfile, delimiter=delim, quotechar='|')
                 return [row for row in file]
 
         def gerar_rotas_list(rotas_list: list, opcao_tabela: int):
-            assert len(rotas_list) > 0 and opcao_tabela
+            assert rotas_list and len(rotas_list) > 0
+            assert opcao_tabela is not None
+
             if opcao_tabela == Tabelas.TABELA1:
                 return [RotaTabela1(rota["origem"], rota["destino"], int(rota["prazo"]), float(rota["seguro"]),
                                     rota["kg"], float(rota["fixa"])) for rota in rotas_list]
@@ -107,45 +118,63 @@ class Orcamento:
                         for rota in rotas_list]
 
         def gerar_preco_por_kg_list(preco_por_kg_list: list):
-            assert len(preco_por_kg_list) > 0
+            assert preco_por_kg_list and len(preco_por_kg_list) > 0
+
             return [PrecoPorKg(preco_por_kg["nome"], float(preco_por_kg["inicial"]),
                                float(preco_por_kg["final"]) if preco_por_kg["final"] else None,
                                float(preco_por_kg["preco"])) for preco_por_kg in preco_por_kg_list]
 
-        self.rotas_tabela1_list = gerar_rotas_list(carregar_csv("tabela/rotas.csv"), Tabelas.TABELA1)
-        self.precos_por_kg_tabela1_list = gerar_preco_por_kg_list(carregar_csv("tabela/preco_por_kg.csv"))
-        self.rotas_tabela2_list = gerar_rotas_list(carregar_csv("tabela2/rotas.tsv", '\t'), Tabelas.TABELA2)
-        self.precos_por_kg_tabela2_list = gerar_preco_por_kg_list(carregar_csv("tabela2/preco_por_kg.tsv", '\t'))
+        def obter_rota(rotas_list: list):
+            assert rotas_list and len(rotas_list) > 0
 
-        # print(rota.__dict__ for rota in self.rotas_tabela1_list)
-        # print(rota.__dict__ for rota in self.rotas_tabela2_list)
-
-    def obter_rota(self, origem: str, destino: str, opcao_tabela: int):
-        if opcao_tabela == Tabelas.TABELA1:
-            for rota in self.rotas_tabela1_list:
-                if rota.origem == origem and rota.destino == destino:
-                    return rota
-        elif opcao_tabela == Tabelas.TABELA2:
-            for rota in self.rotas_tabela2_list:
-                if rota.origem == origem and rota.destino == destino:
+            for rota in rotas_list:
+                if rota.origem == self.origem and rota.destino == self.destino:
                     return rota
 
-    def obter_preco_por_kg(self, kg: str, peso: float, opcao_tabela: int):
-        if opcao_tabela == Tabelas.TABELA1:
-            preco_por_kg_list = self.precos_por_kg_tabela1_list
-        elif opcao_tabela == Tabelas.TABELA2:
-            preco_por_kg_list = self.precos_por_kg_tabela2_list
+        def obter_preco_por_kg(rota: Rota, precos_por_kg_list: list):
+            assert rota
+            assert precos_por_kg_list and len(precos_por_kg_list) > 0
 
-        for preco_por_kg in preco_por_kg_list:
-            if preco_por_kg.nome == kg and preco_por_kg.testar_intervalo(peso):
-                return preco_por_kg
+            for preco_por_kg in precos_por_kg_list:
+                if preco_por_kg.nome == rota.kg and preco_por_kg.testar_intervalo(self.peso):
+                    return preco_por_kg.preco
+
+            return None
+
+        self.__rotas_por_tabela__ = []
+        self.__precos_por_kg_por_tabela__ = []
+        self.__rota__ = []
+        self.__preco_por_kg__ = []
+
+        # Adição da Tabela 1
+        tabela = Tabelas.TABELA1
+        self.__rotas_por_tabela__.append(gerar_rotas_list(carregar_csv("tabela/rotas.csv"), tabela))
+        self.__precos_por_kg_por_tabela__.append(gerar_preco_por_kg_list(carregar_csv("tabela/preco_por_kg.csv")))
+        self.__rota__.append(obter_rota(self.__rotas_por_tabela__[tabela]))
+        self.__preco_por_kg__.append(obter_preco_por_kg(self.__rota__[tabela],
+                                                        self.__precos_por_kg_por_tabela__[tabela]))
+
+        # Adição da Tabela 2
+        tabela = Tabelas.TABELA2
+        self.__rotas_por_tabela__.append(gerar_rotas_list(carregar_csv("tabela2/rotas.tsv", '\t'), tabela))
+        self.__precos_por_kg_por_tabela__.append(gerar_preco_por_kg_list(carregar_csv("tabela2/preco_por_kg.tsv", '\t')))
+        self.__rota__.append(obter_rota(self.__rotas_por_tabela__[tabela]))
+        self.__preco_por_kg__.append(obter_preco_por_kg(self.__rota__[tabela],
+                                                        self.__precos_por_kg_por_tabela__[tabela]))
 
     def calcular_total(self, opcao_tabela: int):
-        rota = self.obter_rota(self.origem, self.destino, opcao_tabela)
-        preco_por_kg = self.obter_preco_por_kg(rota.kg, self.peso, opcao_tabela)
-        return rota.calcular_total(preco_por_kg.preco, self.peso, self.nota_fiscal)
+        return self.__rota__[opcao_tabela].calcular_total(self.__preco_por_kg__[opcao_tabela], self.peso,
+                                                          self.nota_fiscal)
 
 if __name__ == "__main__":
     orcamento = Orcamento(sys.argv[1], sys.argv[2], float(sys.argv[3]), float(sys.argv[4]))
-    print(orcamento.calcular_total(Tabelas.TABELA1))
-    print(orcamento.calcular_total(Tabelas.TABELA2))
+
+    try:
+        print("tabela1:{0:.2f}".format(orcamento.calcular_total(Tabelas.TABELA1)))
+    except:
+        print(orcamento.calcular_total(Tabelas.TABELA1))
+
+    try:
+        print("{0:.2f}".format(orcamento.calcular_total(Tabelas.TABELA2)))
+    except:
+        print(orcamento.calcular_total(Tabelas.TABELA2))
