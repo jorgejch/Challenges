@@ -143,38 +143,41 @@ class Orcamento:
 
         self.__rotas_por_tabela__ = []
         self.__precos_por_kg_por_tabela__ = []
-        self.__rota__ = []
+        self.rota = []
         self.__preco_por_kg__ = []
 
         # Adição da Tabela 1
         tabela = Tabelas.TABELA1
         self.__rotas_por_tabela__.append(gerar_rotas_list(carregar_csv("tabela/rotas.csv"), tabela))
         self.__precos_por_kg_por_tabela__.append(gerar_preco_por_kg_list(carregar_csv("tabela/preco_por_kg.csv")))
-        self.__rota__.append(obter_rota(self.__rotas_por_tabela__[tabela]))
-        self.__preco_por_kg__.append(obter_preco_por_kg(self.__rota__[tabela],
+        self.rota.append(obter_rota(self.__rotas_por_tabela__[tabela]))
+        self.__preco_por_kg__.append(obter_preco_por_kg(self.rota[tabela],
                                                         self.__precos_por_kg_por_tabela__[tabela]))
 
         # Adição da Tabela 2
         tabela = Tabelas.TABELA2
         self.__rotas_por_tabela__.append(gerar_rotas_list(carregar_csv("tabela2/rotas.tsv", '\t'), tabela))
         self.__precos_por_kg_por_tabela__.append(gerar_preco_por_kg_list(carregar_csv("tabela2/preco_por_kg.tsv", '\t')))
-        self.__rota__.append(obter_rota(self.__rotas_por_tabela__[tabela]))
-        self.__preco_por_kg__.append(obter_preco_por_kg(self.__rota__[tabela],
+        self.rota.append(obter_rota(self.__rotas_por_tabela__[tabela]))
+        self.__preco_por_kg__.append(obter_preco_por_kg(self.rota[tabela],
                                                         self.__precos_por_kg_por_tabela__[tabela]))
 
     def calcular_total(self, opcao_tabela: int):
-        return self.__rota__[opcao_tabela].calcular_total(self.__preco_por_kg__[opcao_tabela], self.peso,
+        return self.rota[opcao_tabela].calcular_total(self.__preco_por_kg__[opcao_tabela], self.peso,
                                                           self.nota_fiscal)
+
+
+def gerar_output(orcamento_final: Orcamento, opcao_tabela: int):
+    try:
+        return "tabela{0}:{1}, {2:.2f}".format(opcao_tabela + 1 if opcao_tabela > 0 else "",
+                                               orcamento_final.rota[opcao_tabela].prazo,
+                                               orcamento_final.calcular_total(opcao_tabela))
+    except:
+        return "tabela{0}:{1}, {2}".format(opcao_tabela + 1 if opcao_tabela > 0 else "", "-",
+                                           orcamento_final.calcular_total(opcao_tabela))
 
 if __name__ == "__main__":
     orcamento = Orcamento(sys.argv[1], sys.argv[2], float(sys.argv[3]), float(sys.argv[4]))
 
-    try:
-        print("tabela1:{0:.2f}".format(orcamento.calcular_total(Tabelas.TABELA1)))
-    except:
-        print(orcamento.calcular_total(Tabelas.TABELA1))
-
-    try:
-        print("{0:.2f}".format(orcamento.calcular_total(Tabelas.TABELA2)))
-    except:
-        print(orcamento.calcular_total(Tabelas.TABELA2))
+    print(gerar_output(orcamento, Tabelas.TABELA1))
+    print(gerar_output(orcamento, Tabelas.TABELA2))
