@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Diagram>
+  <ID>Python</ID>
+  <OriginalElement>#/home/jorge/Pessoal/Challenges/axado/axado.py</OriginalElement>
+  <nodes>
+    <node x="582.0" y="247.0">axado.RotaTabela1</node>
+    <node x="0.0" y="247.0">axado.RotaTabela2</node>
+    <node x="277.25" y="0.0">axado.Rota</node>
+    <node x="0.0" y="405.0">axado.Orcamento</node>
+    <node x="0.0" y="689.0">axado.PrecoPorKg</node>
+    <node x="548.0" y="689.0">axado.Tabelas</node>
+  </nodes>
+  <notes />
+  <edges>
+    <edge source="axado.RotaTabela1" target="axado.Rota">
+      <point x="0.0" y="-56.5" />
+      <point x="803.5" y="222.0" />
+      <point x="674.75" y="222.0" />
+      <point x="132.5" y="98.5" />
+    </edge>
+    <edge source="axado.RotaTabela2" target="axado.Rota">
+      <point x="0.0" y="-56.5" />
+      <point x="281.0" y="222.0" />
+      <point x="409.75" y="222.0" />
+      <point x="-132.5" y="98.5" />
+    </edge>
+  </edges>
+  <settings layout="Hierarchic Group" zoom="0.4734088927637315" x="1076.8987108655617" y="523.5" />
+  <SelectedNodes />
+  <Categories>
+    <Category>Methods</Category>
+    <Category>Inner Classes</Category>
+    <Category>Fields</Category>
+  </Categories>
+</Diagram>
+
